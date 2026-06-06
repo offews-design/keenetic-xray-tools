@@ -23,6 +23,24 @@ fi
 
 mkdir -p "$XRAY_DIR"
 
+find_xray_bin() {
+  if [ -x "$XRAY_BIN" ]; then
+    echo "$XRAY_BIN"
+    return 0
+  fi
+  if command -v xray >/dev/null 2>&1; then
+    command -v xray
+    return 0
+  fi
+  for p in /opt/sbin/xray /opt/usr/bin/xray /opt/usr/sbin/xray /usr/bin/xray /usr/sbin/xray; do
+    if [ -x "$p" ]; then
+      echo "$p"
+      return 0
+    fi
+  done
+  return 1
+}
+
 backup_existing() {
   TS="$(date +%Y%m%d-%H%M%S 2>/dev/null || echo manual)"
   DEST="$BACKUP_ROOT/$TS"
@@ -71,13 +89,17 @@ echo "[1.5/7] Backing up existing Xray files"
 backup_existing
 
 echo "[2/7] Installing Xray if missing"
-if [ ! -x "$XRAY_BIN" ]; then
+FOUND_XRAY_BIN="$(find_xray_bin 2>/dev/null || true)"
+if [ -n "$FOUND_XRAY_BIN" ]; then
+  XRAY_BIN="$FOUND_XRAY_BIN"
+  echo "Using existing Xray: $XRAY_BIN"
+else
   ARCH="$(uname -m)"
   case "$ARCH" in
     aarch64|arm64) XRAY_ARCH="arm64-v8a" ;;
     armv7l|armv7*) XRAY_ARCH="arm32-v7a" ;;
     mipsel*) XRAY_ARCH="mips32le" ;;
-    mips*) XRAY_ARCH="mips32" ;;
+    mips*) XRAY_ARCH="mips32le" ;;
     *) echo "Unsupported arch: $ARCH"; exit 1 ;;
   esac
 
@@ -88,7 +110,12 @@ if [ ! -x "$XRAY_BIN" ]; then
   echo "Downloading $URL"
   curl -L --fail -o "$ZIP" "$URL"
   unzip -o "$ZIP" -d "$TMP"
-  install -m 755 "$TMP/xray" "$XRAY_BIN"
+  if [ -x "$TMP/xray_softfloat" ]; then
+    cp "$TMP/xray_softfloat" "$XRAY_BIN"
+  else
+    cp "$TMP/xray" "$XRAY_BIN"
+  fi
+  chmod 755 "$XRAY_BIN"
 fi
 
 echo "[3/7] Parsing VLESS URL"
@@ -263,6 +290,10 @@ echo "[5/7] Testing config"
 
 echo "[6/7] Starting Xray"
 "$INIT_SCRIPT" stop >/dev/null 2>&1 || true
+for pid in $(ps | awk '/[x]ray/ {print $1}'); do
+  kill "$pid" 2>/dev/null || true
+done
+sleep 1
 "$INIT_SCRIPT" start
 
 echo "[7/7] Optional transparent mode"
