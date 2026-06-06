@@ -442,7 +442,7 @@ curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/m
 
 Причина: на некоторых Entware-системах нет команды `install`.
 
-Решение: используй актуальный `main/install.sh`. В нём установка Xray делается через `cp` и `chmod`.
+Решение: используйте актуальный `main/install.sh`. В нём установка Xray делается через `cp` и `chmod`.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/install.sh | sh -s -- "$VLESS"
@@ -459,7 +459,7 @@ failed to open file: geoip.dat
 
 Причина: Xray ищет `geoip.dat` рядом со своим бинарником, а файла там нет.
 
-Решение: используй актуальный `main/install.sh`. Он не использует `geoip:private`, а прописывает приватные сети напрямую.
+Решение: используйте актуальный `main/install.sh`. Он не использует `geoip:private`, а прописывает приватные сети напрямую.
 
 ### `ERR_CONNECTION_REFUSED` после включения transparent
 
@@ -515,13 +515,13 @@ curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/m
 
 ### YouTube работает, но медленно
 
-Сначала включи QUIC-блок:
+Сначала включите QUIC-блок:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- block-quic
 ```
 
-Потом сравни скорость:
+Потом сравните скорость:
 
 ```sh
 curl -L -o /dev/null https://speed.cloudflare.com/__down?bytes=10000000
@@ -532,7 +532,7 @@ curl -L --socks5-hostname 127.0.0.1:10808 -o /dev/null https://speed.cloudflare.
 
 ### Высокий CPU на роутере
 
-Проверка во время YouTube:
+Проверка во время воспроизвидения ролика с YouTube:
 
 ```sh
 top -bn1 | head -n 20
@@ -557,7 +557,7 @@ curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/m
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- status
 ```
 
-### Нужно срочно вернуть интернет клиенту
+### Нужно срочно вернуть интернет
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
