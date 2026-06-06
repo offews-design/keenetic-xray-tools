@@ -1,5 +1,9 @@
 # Keenetic Xray Tools
 
+![Shell](https://img.shields.io/badge/shell-POSIX%20sh-blue)
+![Keenetic](https://img.shields.io/badge/Keenetic-Entware-00a884)
+![Xray](https://img.shields.io/badge/Xray-VLESS%20REALITY-orange)
+
 Скрипты для настройки Xray на роутерах Keenetic/Netcraze с Entware: установка VLESS, диагностика, transparent routing, QUIC-block, repair, backup и автозапуск правил.
 
 ## Навигация
@@ -12,7 +16,6 @@
 - [Автозапуск маршрутов](#автозапуск-маршрутов)
 - [Частые проблемы](#частые-проблемы)
 - [Какой профиль создавать в 3x-ui](#какой-профиль-создавать-в-3x-ui)
-- [Security Policy](SECURITY.md)
 
 ## Что умеет
 
