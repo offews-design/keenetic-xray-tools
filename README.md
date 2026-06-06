@@ -436,6 +436,140 @@ curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/m
 /opt/root/xray-backups/
 ```
 
+## Частые проблемы
+
+### `sh: install: not found`
+
+Причина: на некоторых Entware-системах нет команды `install`.
+
+Решение: используй актуальный `main/install.sh`. В нём установка Xray делается через `cp` и `chmod`.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/install.sh | sh -s -- "$VLESS"
+```
+
+### `failed to open file: geoip.dat`
+
+Пример ошибки:
+
+```text
+failed to load GeoIP: private
+failed to open file: geoip.dat
+```
+
+Причина: Xray ищет `geoip.dat` рядом со своим бинарником, а файла там нет.
+
+Решение: используй актуальный `main/install.sh`. Он не использует `geoip:private`, а прописывает приватные сети напрямую.
+
+### `ERR_CONNECTION_REFUSED` после включения transparent
+
+Причина: `transparent-in` слушает `127.0.0.1:12345`, а для LAN-перехвата нужен `0.0.0.0:12345`.
+
+Решение:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/fix-transparent-listen.sh | sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- enable
+```
+
+### `check.sh` показывает Xray, но нет `10808`
+
+Признаки:
+
+```text
+xray run
+слушает случайный порт, например 61219
+127.0.0.1:10808 отсутствует
+/opt/etc/xray/config.json отсутствует
+```
+
+Причина: запущен старый или чужой Xray-процесс, а не управляемый конфиг из этих скриптов.
+
+Решение:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
+VLESS='vless://CLIENT_LINK'
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/install.sh | sh -s -- "$VLESS"
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/check.sh | sh
+```
+
+### `Connectivity` не возвращает IP
+
+Причины:
+
+- неверная VLESS-ссылка;
+- ссылка была вставлена с переносом строки внутри `pbk`, `sid` или UUID;
+- сервер/порт недоступен;
+- Reality `pbk`, `sid`, `sni`, `fp` не совпадают с сервером.
+
+Проверка:
+
+```sh
+echo "$VLESS"
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/check.sh | sh
+```
+
+Если ссылка визуально переносится в терминале из-за ширины окна, это не страшно. Плохо, если перенос реально попал внутрь переменной.
+
+### YouTube работает, но медленно
+
+Сначала включи QUIC-блок:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- block-quic
+```
+
+Потом сравни скорость:
+
+```sh
+curl -L -o /dev/null https://speed.cloudflare.com/__down?bytes=10000000
+curl -L --socks5-hostname 127.0.0.1:10808 -o /dev/null https://speed.cloudflare.com/__down?bytes=50000000
+```
+
+Если CPU низкий, но скорость через SOCKS в 2 раза ниже прямой, ограничение в профиле или маршруте до сервера, а не в Keenetic.
+
+### Высокий CPU на роутере
+
+Проверка во время YouTube:
+
+```sh
+top -bn1 | head -n 20
+```
+
+Если CPU около 80-100%, слабый роутер не вытягивает текущий профиль. Для MIPS-моделей вроде Viva лучше пробовать TCP/REALITY или менять роутер на Hopper/Giga/Hero.
+
+### После перезагрузки снова не работает
+
+Причина: Xray может стартовать, а firewall-правила transparent не восстановились.
+
+Решение после того, как профиль проверен:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/autostart-transparent.sh | sh
+```
+
+Проверка после reboot:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/check.sh | sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- status
+```
+
+### Нужно срочно вернуть интернет клиенту
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- unblock-quic
+```
+
+Если нужно полностью остановить Xray:
+
+```sh
+/opt/etc/init.d/S24xray stop
+```
+
 ## Удаление
 
 ```sh
