@@ -2,6 +2,48 @@
 
 Набор скриптов для быстрой настройки Xray на роутерах Keenetic с Entware.
 
+## Рекомендуемые модели Keenetic
+
+Для новых установок лучше использовать модели с запасом по CPU/RAM и поддержкой Entware/OPKG.
+
+Основной рекомендуемый вариант:
+
+```text
+Keenetic Hopper KN-3811
+```
+
+Также подходят как варианты с запасом:
+
+```text
+Keenetic Hero KN-1012
+Keenetic Giga KN-1012
+Keenetic Ultra
+Keenetic Peak
+```
+
+Минимальные требования:
+
+```text
+CPU: ARM/ARM64, желательно 2 ядра от 1 GHz
+RAM: 512 MB
+Entware/OPKG: да
+USB-порт: да
+SSH: да
+```
+
+Не рекомендуется брать для новых установок:
+
+```text
+Keenetic Start
+Keenetic Lite
+Keenetic City
+Keenetic Air
+старые MIPS-модели
+модели с 128/256 MB RAM
+```
+
+Старые или слабые модели могут работать, но для YouTube/Telegram/Instagram через Xray часто не хватает производительности.
+
 Цель схемы:
 
 - Telegram / YouTube / Instagram идут через VPN.
