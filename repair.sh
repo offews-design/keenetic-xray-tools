@@ -11,6 +11,16 @@ say() {
   echo "[$(date '+%H:%M:%S' 2>/dev/null || echo repair)] $*"
 }
 
+curl_socks_test() {
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 20 curl -sS --socks5-hostname "127.0.0.1:$SOCKS_PORT" https://ifconfig.me/ip
+  elif command -v gtimeout >/dev/null 2>&1; then
+    gtimeout 20 curl -sS --socks5-hostname "127.0.0.1:$SOCKS_PORT" https://ifconfig.me/ip
+  else
+    curl -m 20 -sS --socks5-hostname "127.0.0.1:$SOCKS_PORT" https://ifconfig.me/ip
+  fi
+}
+
 fail=0
 
 say "Checking /opt"
@@ -112,7 +122,7 @@ netstat -lntup 2>/dev/null | grep -E "$SOCKS_PORT|12345|xray" || true
 
 say "Testing SOCKS proxy"
 if command -v curl >/dev/null 2>&1; then
-  if timeout 20 curl -sS --socks5-hostname "127.0.0.1:$SOCKS_PORT" https://ifconfig.me/ip; then
+  if curl_socks_test; then
     echo
     say "SOCKS test OK"
   else
@@ -134,4 +144,3 @@ else
 fi
 
 exit "$fail"
-
