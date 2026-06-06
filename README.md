@@ -50,7 +50,7 @@ Keenetic Hopper DSL KN-3610
 Netcraze Hopper DSL NC-3611
 ```
 
-Не брать как основной вариант для Xray/YouTube:
+Не брать как основной вариант для Xray:
 
 ```text
 Keenetic Start
@@ -66,7 +66,7 @@ Speedster / Speedster DSL / Speedster 4G+
 модели с 128/256 MB RAM
 модели без USB
 модели без OPKG/Entware
-модели без точного KN/NC-кода в объявлении
+модели без точного KN/NC-кода
 ```
 
 Минимальные требования:
@@ -79,9 +79,8 @@ USB-порт: да
 SSH: да
 ```
 
-Если в объявлении указано только `Hopper`, `Hero`, `Giga`, `Ultra`, `Peak` или `Netcraze`, но нет точного `KN-xxxx` / `NC-xxxx`, решение о покупке не принимаем до уточнения ревизии.
 
-Старые или слабые модели могут запускать OPKG, но для YouTube/Telegram/Instagram через Xray часто не хватает производительности.
+Старые или слабые модели могут запускать OPKG, но для работы через Xray часто не хватает производительности.
 
 Проверочные источники:
 
@@ -127,7 +126,7 @@ opkg --version
 
 ## Флешка для Entware
 
-Для массовой настройки рекомендуется использовать USB-накопитель:
+Для настройки рекомендуется использовать USB-накопитель:
 
 ```text
 USB 3.0 флешка 16-32 GB
@@ -172,7 +171,7 @@ sh /tmp/prepare-usb.sh --auto ENTWARE
 
 Внимание: скрипт полностью стирает выбранный USB-накопитель.
 
-Если `--auto` отказывается работать, значит найдено несколько USB/removable устройств. Тогда выбери флешку вручную:
+Если `--auto` отказывается работать, значит найдено несколько USB/removable устройств. Тогда выберите флешку вручную:
 
 ```sh
 sh /tmp/prepare-usb.sh /dev/sda ENTWARE
@@ -186,11 +185,11 @@ sh /tmp/prepare-usb.sh /dev/sda ENTWARE
 lsblk
 ```
 
-Не запускай ручной режим, если не уверен, что `/dev/sda` - это именно флешка.
+Не запускайте ручной режим, если не уверен, что `/dev/sda` - это именно флешка.
 
 ### Подготовка флешки на Windows
 
-Если флешку нужно подготовить заранее на Windows, используй программу, которая умеет создавать ext4-разделы:
+Если флешку нужно подготовить заранее на Windows, используйте программу, которая умеет создавать ext4-разделы, например:
 
 ```text
 MiniTool Partition Wizard
@@ -209,26 +208,26 @@ Label: ENTWARE
 Size: весь накопитель
 ```
 
-Обычное форматирование Windows в `FAT32`, `exFAT` или `NTFS` для Entware лучше не использовать.
+Обычное форматирование Windows в `FAT32`, `exFAT` или `NTFS` для Entware не подходит.
 
 ## Установка
 
-В 3x-ui создай отдельного клиента для Keenetic и скопируй его `vless://...` ссылку.
+Нужна ссылка конфигурации в формате `vless://...`.
 
-Сначала отключи старые transparent-правила, если они уже включались:
+Сначала отключите старые transparent-правила, если они уже есть и включались:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- unblock-quic
 ```
 
-Затем сохрани ссылку в переменную. Вставляй ссылку одной строкой, без переносов внутри `pbk`, `sid` и других параметров:
+Затем сохраните ссылку в переменную. Вставляйте ссылку одной строкой, без переносов внутри `pbk`, `sid` и других параметров:
 
 ```sh
 VLESS='vless://CLIENT_LINK'
 ```
 
-Установи или обнови Xray-конфиг:
+Установить или обновить Xray-конфиг:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/install.sh | sh -s -- "$VLESS"
@@ -273,7 +272,7 @@ xray run -config /opt/etc/xray/config.json
 Connectivity: внешний IP
 ```
 
-Если `12345` слушает `127.0.0.1`, исправь старый конфиг:
+Если `12345` слушает `127.0.0.1`, исправьте старый конфиг(если он был):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/fix-transparent-listen.sh | sh
@@ -281,19 +280,19 @@ curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/m
 
 ## Тест скорости
 
-Сначала проверь скорость без Xray:
+Сначала проверьте скорость без Xray:
 
 ```sh
 curl -L -o /dev/null https://speed.cloudflare.com/__down?bytes=10000000
 ```
 
-Потом проверь скорость через локальный SOCKS Xray:
+Потом проверьте скорость через локальный SOCKS Xray:
 
 ```sh
 curl -L --socks5-hostname 127.0.0.1:10808 -o /dev/null https://speed.cloudflare.com/__down?bytes=50000000
 ```
 
-Сравни значения `Average Speed`:
+Сравните значения `Average Speed`:
 
 ```text
 1 MB/s  примерно 8 Мбит/с
@@ -305,7 +304,7 @@ curl -L --socks5-hostname 127.0.0.1:10808 -o /dev/null https://speed.cloudflare.
 
 ## Прозрачный режим
 
-Прозрачный режим включай только после успешного `check.sh` и теста SOCKS.
+Прозрачный режим включайте только после успешного `check.sh` и теста SOCKS.
 
 Включить TCP redirect для LAN:
 
@@ -335,7 +334,7 @@ https://web.telegram.org
 https://instagram.com
 ```
 
-Если браузер показывает `ERR_CONNECTION_REFUSED`, значит `transparent-in` в Xray слушает не `0.0.0.0:12345`. Выполни:
+Если браузер показывает `ERR_CONNECTION_REFUSED`, значит `transparent-in` в Xray слушает не `0.0.0.0:12345`. Выполните:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
@@ -359,7 +358,7 @@ curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/m
 
 ## Автозапуск маршрутов
 
-Xray запускается через `/opt/etc/init.d/S24xray`, но firewall-правила могут пропасть после перезагрузки роутера. После того как профиль проверен и работает, установи автозапуск transparent + QUIC-block:
+Xray запускается через `/opt/etc/init.d/S24xray`, но firewall-правила могут пропасть после перезагрузки роутера. После того как профиль проверен и работает, установите автозапуск transparent + QUIC-block:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/autostart-transparent.sh | sh
@@ -410,7 +409,7 @@ Repair проверяет:
 
 ## Быстрый откат
 
-Если после включения transparent у клиента пропал интернет:
+Если после включения transparent пропал интернет:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
@@ -449,7 +448,7 @@ curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/m
 
 ## Какой профиль создавать в 3x-ui
 
-Для Keenetic делай отдельного клиента в 3x-ui и тестируй минимум два профиля.
+Для Keenetic делайте отдельного клиента в 3x-ui и тестируйте минимум два профиля.
 
 Профиль 1: TCP/REALITY, обычно легче для слабых роутеров:
 
@@ -476,7 +475,7 @@ Path: /
 Mode: auto
 ```
 
-Для каждого профиля делай одинаковый тест:
+Для каждого профиля делайте одинаковый тест:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
@@ -486,6 +485,6 @@ curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/m
 curl -L --socks5-hostname 127.0.0.1:10808 -o /dev/null https://speed.cloudflare.com/__down?bytes=50000000
 ```
 
-Оставляй профиль, который дает лучшую скорость и стабильнее открывает YouTube.
+Оставляйте профиль, который дает лучшую скорость и стабильнее открывает YouTube.
 
 Для старых MIPS-моделей вроде Keenetic Viva не жди высокой скорости на 1080p. Если через SOCKS получается около `1.8 MB/s`, это примерно `14-15 Мбит/с`: 720p обычно нормально, 1080p может буферить.
