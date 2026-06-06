@@ -9,6 +9,7 @@ XRAY_DIR="/opt/etc/xray"
 XRAY_CONFIG="$XRAY_DIR/config.json"
 INIT_SCRIPT="/opt/etc/init.d/S24xray"
 TPROXY_PORT="12345"
+BACKUP_ROOT="/opt/root/xray-backups"
 
 if [ -z "$VLESS_URL" ]; then
   echo "Usage: sh keenetic-install.sh 'vless://...' [--transparent]"
@@ -22,11 +23,52 @@ fi
 
 mkdir -p "$XRAY_DIR"
 
+backup_existing() {
+  TS="$(date +%Y%m%d-%H%M%S 2>/dev/null || echo manual)"
+  DEST="$BACKUP_ROOT/$TS"
+  mkdir -p "$DEST"
+  [ -e "$XRAY_CONFIG" ] && cp -a "$XRAY_CONFIG" "$DEST/config.json"
+  [ -e "$INIT_SCRIPT" ] && cp -a "$INIT_SCRIPT" "$DEST/S24xray"
+  [ -e "$XRAY_BIN" ] && cp -a "$XRAY_BIN" "$DEST/xray"
+  ps | grep '[x]ray' > "$DEST/xray.ps" 2>/dev/null || true
+  netstat -lntup > "$DEST/netstat.txt" 2>/dev/null || true
+  echo "Backup directory: $DEST"
+}
+
+url_decode() {
+  printf '%s' "$1" |
+    sed \
+      -e 's/%2[Ff]/\//g' \
+      -e 's/%3[Aa]/:/g' \
+      -e 's/%3[Ff]/?/g' \
+      -e 's/%26/\&/g' \
+      -e 's/%3[Dd]/=/g' \
+      -e 's/%2[Bb]/+/g' \
+      -e 's/%40/@/g' \
+      -e 's/%20/ /g' \
+      -e 's/%25/%/g'
+}
+
+query_value() {
+  key="$1"
+  default="$2"
+  printf '%s\n' "$QUERY" |
+    tr '&' '\n' |
+    awk -F= -v k="$key" -v d="$default" '$1 == k {print substr($0, length(k) + 2); found=1; exit} END {if (!found) print d}'
+}
+
 echo "[1/7] Checking packages"
 if command -v opkg >/dev/null 2>&1; then
   opkg update || true
-  opkg install ca-bundle curl jq iptables ipset coreutils-timeout >/dev/null 2>&1 || true
+  opkg install ca-bundle curl jq unzip iptables ipset coreutils-timeout >/dev/null 2>&1 || true
 fi
+if ! command -v jq >/dev/null 2>&1; then
+  echo "ERROR: jq not found. Install Entware package: opkg install jq"
+  exit 1
+fi
+
+echo "[1.5/7] Backing up existing Xray files"
+backup_existing
 
 echo "[2/7] Installing Xray if missing"
 if [ ! -x "$XRAY_BIN" ]; then
@@ -50,196 +92,156 @@ if [ ! -x "$XRAY_BIN" ]; then
 fi
 
 echo "[3/7] Parsing VLESS URL"
-python3 - "$VLESS_URL" "$XRAY_CONFIG" <<'PY'
-import json, sys, urllib.parse
+case "$VLESS_URL" in
+  vless://*) ;;
+  *) echo "Only vless:// URL is supported"; exit 1 ;;
+esac
 
-url = sys.argv[1]
-out = sys.argv[2]
+URL_NO_SCHEME="${VLESS_URL#vless://}"
+BEFORE_QUERY="${URL_NO_SCHEME%%\?*}"
+QUERY=""
+[ "$BEFORE_QUERY" != "$URL_NO_SCHEME" ] && QUERY="${URL_NO_SCHEME#*\?}"
+BEFORE_HASH="${BEFORE_QUERY%%#*}"
 
-u = urllib.parse.urlsplit(url)
-if u.scheme != "vless":
-    raise SystemExit("Only vless:// URL is supported")
+UUID="${BEFORE_HASH%@*}"
+SERVER_PORT="${BEFORE_HASH#*@}"
+HOST="${SERVER_PORT%:*}"
+PORT="${SERVER_PORT##*:}"
 
-uuid = urllib.parse.unquote(u.username or "")
-host = u.hostname
-port = u.port
-q = urllib.parse.parse_qs(u.query)
-def one(key, default=""):
-    return q.get(key, [default])[0]
+SECURITY="$(url_decode "$(query_value security reality)")"
+NETWORK="$(url_decode "$(query_value type "$(query_value network tcp)")")"
+FLOW="$(url_decode "$(query_value flow "")")"
+SNI="$(url_decode "$(query_value sni "$(query_value serverName "")")")"
+FP="$(url_decode "$(query_value fp "$(query_value fingerprint chrome)")")"
+PBK="$(url_decode "$(query_value pbk "$(query_value publicKey "")")")"
+SID="$(url_decode "$(query_value sid "$(query_value shortId "")")")"
+SPX="$(url_decode "$(query_value spx "$(query_value spiderX /)")")"
+PATH_VALUE="$(url_decode "$(query_value path /)")"
+HOST_HEADER="$(url_decode "$(query_value host "")")"
 
-security = one("security", "reality")
-network = one("type", one("network", "tcp"))
-flow = one("flow", "")
-sni = one("sni", one("serverName", ""))
-fp = one("fp", one("fingerprint", "chrome"))
-pbk = one("pbk", one("publicKey", ""))
-sid = one("sid", one("shortId", ""))
-spx = one("spx", one("spiderX", "/"))
-path = one("path", "/")
-host_header = one("host", "")
+if [ -z "$UUID" ] || [ -z "$HOST" ] || [ -z "$PORT" ] || [ "$HOST" = "$SERVER_PORT" ]; then
+  echo "Bad VLESS URL: missing uuid/host/port"
+  exit 1
+fi
 
-if not all([uuid, host, port]):
-    raise SystemExit("Bad VLESS URL: missing uuid/host/port")
+JQ_STREAM='
+  {network: $network, security: $security}
+  | if $network == "tcp" then . + {tcpSettings: {header: {type: "none"}}}
+    elif ($network == "xhttp" or $network == "splithttp") then . + {xhttpSettings: ({path: $path, mode: "auto", extra: {headers: {}}} + (if $host_header != "" then {host: $host_header} else {} end))}
+    elif $network == "ws" then . + {wsSettings: ({path: $path, headers: {}} + (if $host_header != "" then {headers: {Host: $host_header}} else {} end))}
+    else .
+    end
+  | if $security == "reality" then . + {realitySettings: {serverName: $sni, fingerprint: $fp, publicKey: $pbk, shortId: $sid, spiderX: $spx}}
+    elif $security == "tls" then . + {tlsSettings: {serverName: $sni, fingerprint: $fp, allowInsecure: false}}
+    else .
+    end
+'
 
-stream = {
-    "network": network,
-    "security": security,
-}
-
-if network == "tcp":
-    stream["tcpSettings"] = {"header": {"type": "none"}}
-elif network in ("xhttp", "splithttp"):
-    stream["xhttpSettings"] = {
-        "path": path or "/",
-        "mode": "auto",
-        "extra": {
-            "headers": {}
-        }
-    }
-    if host_header:
-        stream["xhttpSettings"]["host"] = host_header
-elif network == "ws":
-    stream["wsSettings"] = {"path": path or "/", "headers": {}}
-    if host_header:
-        stream["wsSettings"]["headers"]["Host"] = host_header
-
-if security == "reality":
-    stream["realitySettings"] = {
-        "serverName": sni,
-        "fingerprint": fp,
-        "publicKey": pbk,
-        "shortId": sid,
-        "spiderX": spx or "/"
-    }
-elif security == "tls":
-    stream["tlsSettings"] = {
-        "serverName": sni,
-        "fingerprint": fp,
-        "allowInsecure": False
-    }
-
-user = {
-    "id": uuid,
-    "encryption": "none"
-}
-if flow:
-    user["flow"] = flow
-
-config = {
-    "log": {"loglevel": "warning"},
-    "dns": {
-        "servers": [
-            "1.1.1.1",
-            "8.8.8.8"
-        ],
-        "queryStrategy": "UseIPv4"
+jq -n \
+  --arg uuid "$UUID" \
+  --arg host "$HOST" \
+  --argjson port "$PORT" \
+  --arg flow "$FLOW" \
+  --arg network "$NETWORK" \
+  --arg security "$SECURITY" \
+  --arg sni "$SNI" \
+  --arg fp "$FP" \
+  --arg pbk "$PBK" \
+  --arg sid "$SID" \
+  --arg spx "$SPX" \
+  --arg path "$PATH_VALUE" \
+  --arg host_header "$HOST_HEADER" \
+  --argjson tproxy_port "$TPROXY_PORT" \
+  "$JQ_STREAM as \$stream |
+  {
+    log: {loglevel: \"warning\"},
+    dns: {
+      servers: [\"1.1.1.1\", \"8.8.8.8\"],
+      queryStrategy: \"UseIPv4\"
     },
-    "inbounds": [
-        {
-            "tag": "socks-in",
-            "listen": "127.0.0.1",
-            "port": 10808,
-            "protocol": "socks",
-            "settings": {
-                "udp": True,
-                "auth": "noauth"
-            },
-            "sniffing": {
-                "enabled": True,
-                "destOverride": ["http", "tls", "quic"]
+    inbounds: [
+      {
+        tag: \"socks-in\",
+        listen: \"127.0.0.1\",
+        port: 10808,
+        protocol: \"socks\",
+        settings: {udp: true, auth: \"noauth\"},
+        sniffing: {enabled: true, destOverride: [\"http\", \"tls\", \"quic\"]}
+      },
+      {
+        tag: \"transparent-in\",
+        listen: \"127.0.0.1\",
+        port: \$tproxy_port,
+        protocol: \"dokodemo-door\",
+        settings: {network: \"tcp,udp\", followRedirect: true},
+        sniffing: {enabled: true, destOverride: [\"http\", \"tls\", \"quic\"]}
+      }
+    ],
+    outbounds: [
+      {
+        tag: \"proxy\",
+        protocol: \"vless\",
+        settings: {
+          vnext: [
+            {
+              address: \$host,
+              port: \$port,
+              users: [({id: \$uuid, encryption: \"none\"} + (if \$flow != \"\" then {flow: \$flow} else {} end))]
             }
+          ]
+        },
+        streamSettings: \$stream
+      },
+      {tag: \"direct\", protocol: \"freedom\"},
+      {tag: \"block\", protocol: \"blackhole\"}
+    ],
+    routing: {
+      domainStrategy: \"IPIfNonMatch\",
+      rules: [
+        {type: \"field\", ip: [\"geoip:private\"], outboundTag: \"direct\"},
+        {
+          type: \"field\",
+          domain: [
+            \"domain:youtube.com\",
+            \"domain:www.youtube.com\",
+            \"domain:m.youtube.com\",
+            \"domain:youtu.be\",
+            \"domain:googlevideo.com\",
+            \"domain:ytimg.com\",
+            \"domain:ggpht.com\",
+            \"domain:youtubei.googleapis.com\",
+            \"domain:youtube.googleapis.com\",
+            \"domain:instagram.com\",
+            \"domain:www.instagram.com\",
+            \"domain:i.instagram.com\",
+            \"domain:cdninstagram.com\",
+            \"domain:fbcdn.net\",
+            \"domain:facebook.com\",
+            \"domain:graph.facebook.com\",
+            \"domain:t.me\",
+            \"domain:telegram.org\",
+            \"domain:web.telegram.org\"
+          ],
+          outboundTag: \"proxy\"
         },
         {
-            "tag": "transparent-in",
-            "listen": "127.0.0.1",
-            "port": 12345,
-            "protocol": "dokodemo-door",
-            "settings": {
-                "network": "tcp,udp",
-                "followRedirect": True
-            },
-            "sniffing": {
-                "enabled": True,
-                "destOverride": ["http", "tls", "quic"]
-            }
+          type: \"field\",
+          ip: [
+            \"91.108.4.0/22\",
+            \"91.108.8.0/22\",
+            \"91.108.12.0/22\",
+            \"91.108.16.0/22\",
+            \"91.108.20.0/22\",
+            \"91.108.56.0/22\",
+            \"149.154.160.0/20\",
+            \"185.76.151.0/24\"
+          ],
+          outboundTag: \"proxy\"
         }
-    ],
-    "outbounds": [
-        {
-            "tag": "proxy",
-            "protocol": "vless",
-            "settings": {
-                "vnext": [
-                    {
-                        "address": host,
-                        "port": port,
-                        "users": [user]
-                    }
-                ]
-            },
-            "streamSettings": stream
-        },
-        {"tag": "direct", "protocol": "freedom"},
-        {"tag": "block", "protocol": "blackhole"}
-    ],
-    "routing": {
-        "domainStrategy": "IPIfNonMatch",
-        "rules": [
-            {
-                "type": "field",
-                "ip": [
-                    "geoip:private"
-                ],
-                "outboundTag": "direct"
-            },
-            {
-                "type": "field",
-                "domain": [
-                    "domain:youtube.com",
-                    "domain:www.youtube.com",
-                    "domain:m.youtube.com",
-                    "domain:youtu.be",
-                    "domain:googlevideo.com",
-                    "domain:ytimg.com",
-                    "domain:ggpht.com",
-                    "domain:youtubei.googleapis.com",
-                    "domain:youtube.googleapis.com",
-                    "domain:instagram.com",
-                    "domain:www.instagram.com",
-                    "domain:i.instagram.com",
-                    "domain:cdninstagram.com",
-                    "domain:fbcdn.net",
-                    "domain:facebook.com",
-                    "domain:graph.facebook.com",
-                    "domain:t.me",
-                    "domain:telegram.org",
-                    "domain:web.telegram.org"
-                ],
-                "outboundTag": "proxy"
-            },
-            {
-                "type": "field",
-                "ip": [
-                    "91.108.4.0/22",
-                    "91.108.8.0/22",
-                    "91.108.12.0/22",
-                    "91.108.16.0/22",
-                    "91.108.20.0/22",
-                    "91.108.56.0/22",
-                    "149.154.160.0/20",
-                    "185.76.151.0/24"
-                ],
-                "outboundTag": "proxy"
-            }
-        ]
+      ]
     }
-}
-
-with open(out, "w", encoding="utf-8") as f:
-    json.dump(config, f, ensure_ascii=False, indent=2)
-    f.write("\n")
-print("Wrote", out)
-PY
+  }" > "$XRAY_CONFIG"
+echo "Wrote $XRAY_CONFIG"
 
 echo "[4/7] Writing init script"
 cat > "$INIT_SCRIPT" <<EOF
@@ -265,13 +267,12 @@ echo "[6/7] Starting Xray"
 
 echo "[7/7] Optional transparent mode"
 if [ "$TRANSPARENT" = "--transparent" ]; then
-  sh "$(dirname "$0")/keenetic-enable-transparent.sh" || true
+  curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- enable || true
 else
   echo "Transparent redirect is not enabled. To enable later:"
-  echo "  sh keenetic-enable-transparent.sh"
+  echo "  curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- enable"
 fi
 
 echo
 echo "Done. SOCKS test proxy: 127.0.0.1:10808"
-echo "Run: sh keenetic-check.sh"
-
+echo "Run: curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/check.sh | sh"
