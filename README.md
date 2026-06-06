@@ -34,6 +34,39 @@ SSH: да
 
 Если в объявлении указано только `Hopper`, `Hero`, `Giga`, `Ultra` или `Peak`, но нет `KN-xxxx`, решение о покупке не принимаем до уточнения ревизии.
 
+## Модели Netcraze
+
+У Netcraze проверяем точный код `NC-xxxx`. Для наших задач подходят только модели с нормальным запасом по CPU/RAM, USB и поддержкой OPKG/Entware.
+
+Рекомендуемые Netcraze:
+
+```text
+Netcraze Hopper  NC-3811  - основной вариант
+Netcraze Giga    NC-1012  - вариант с запасом
+Netcraze Ultra   NC-1812  - вариант с запасом
+Netcraze Hero 5G NC-4110  - вариант с 5G/LTE, если нужен мобильный WAN
+```
+
+Можно рассматривать только после проверки требований:
+
+```text
+Netcraze Hopper DSL NC-3611  - если клиенту действительно нужен DSL
+Netcraze Viva       NC-1913  - проверять CPU/RAM и сценарий нагрузки
+```
+
+Не брать как основной вариант для Xray/YouTube:
+
+```text
+Netcraze 4G NC-1213
+Netcraze Carrier NC-1721
+Speedster / Speedster DSL / Speedster 4G+
+модели без USB
+модели без OPKG/Entware
+модели без точного NC-кода в объявлении
+```
+
+Для Netcraze действует то же правило: если продавец пишет только `Netcraze Hopper`, `Netcraze Giga` или `Netcraze Ultra`, сначала уточняем `NC-xxxx`.
+
 Не рекомендуется брать для новых установок:
 
 ```text
