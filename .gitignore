@@ -1,0 +1,20 @@
+# Local notes and temporary files
+*.log
+*.tmp
+*.bak
+*.backup
+*.local
+
+# Sensitive exports
+*.vless
+*.sub
+*secret*
+*private*
+config.json
+config.pretty.json
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

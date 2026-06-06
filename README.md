@@ -1,6 +1,89 @@
 # Keenetic Xray Tools
 
-Набор скриптов для быстрой настройки Xray на роутерах Keenetic с Entware.
+![Shell](https://img.shields.io/badge/shell-POSIX%20sh-blue)
+![Keenetic](https://img.shields.io/badge/Keenetic-Entware-00a884)
+![Xray](https://img.shields.io/badge/Xray-VLESS%20REALITY-orange)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
+
+Скрипты для настройки Xray на роутерах Keenetic/Netcraze с Entware: установка VLESS, диагностика, transparent routing, QUIC-block, repair, backup и автозапуск правил.
+
+## Навигация
+
+- [Быстрый старт](#быстрый-старт)
+- [Точные модели Keenetic и Netcraze](#точные-модели-keenetic-и-netcraze)
+- [Установка](#установка)
+- [Проверка](#проверка)
+- [Прозрачный режим](#прозрачный-режим)
+- [Автозапуск маршрутов](#автозапуск-маршрутов)
+- [Частые проблемы](#частые-проблемы)
+- [Какой профиль создавать в 3x-ui](#какой-профиль-создавать-в-3x-ui)
+- [Security Policy](SECURITY.md)
+
+## Что умеет
+
+- Устанавливает или использует уже установленный Xray.
+- Создает управляемый конфиг `/opt/etc/xray/config.json`.
+- Проверяет SOCKS `127.0.0.1:10808` и transparent inbound `0.0.0.0:12345`.
+- Включает и отключает transparent routing для LAN.
+- Блокирует QUIC/UDP-443 для YouTube, чтобы трафик уходил через TCP/Xray.
+- Делает backup перед изменениями.
+- Добавляет автозапуск firewall-правил после перезагрузки.
+- Даёт быстрый repair и понятную диагностику типовых ошибок.
+
+## Быстрый старт
+
+Все команды выполняются на роутере в SSH/Entware-консоли.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- unblock-quic
+
+VLESS='vless://CLIENT_LINK'
+
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/install.sh | sh -s -- "$VLESS"
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/check.sh | sh
+curl -L --socks5-hostname 127.0.0.1:10808 -o /dev/null https://speed.cloudflare.com/__down?bytes=50000000
+
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- enable
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- block-quic
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/autostart-transparent.sh | sh
+```
+
+Быстрый откат, если у клиента пропал интернет:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- unblock-quic
+```
+
+## Файлы
+
+```text
+install.sh                  установка или обновление Xray-конфига
+check.sh                    диагностика Xray, портов, SOCKS и CPU/RAM
+transparent.sh              enable/disable/status transparent routing и QUIC-block
+fix-transparent-listen.sh   исправление listen для transparent-in на 0.0.0.0
+autostart-transparent.sh    автозапуск transparent + QUIC-block после reboot
+repair.sh                   восстановление Xray/service/config
+backup.sh                   backup текущих файлов Xray
+uninstall.sh                отключение Xray и firewall-правил
+prepare-usb.sh              подготовка USB-накопителя под Entware
+examples/                   безопасные шаблоны VLESS без реальных ключей
+```
+
+## Безопасность
+
+Не публикуй в репозитории:
+
+- реальные `vless://` ссылки;
+- UUID клиентов;
+- Reality private key;
+- Reality public key, short ID и seed, если они относятся к боевому серверу;
+- IP-адреса серверов;
+- ссылки подписок 3x-ui;
+- домены панелей и приватные URL.
+
+В README и `examples/` используй только шаблоны вида `CLIENT_LINK`, `example.com`, `PUBLIC_KEY`, `SHORT_ID`.
 
 ```text
 Для bridge-схемы желательно подключение от 50 Мбит/с.

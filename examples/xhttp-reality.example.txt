@@ -1,0 +1,7 @@
+# XHTTP/REALITY VLESS template
+#
+# Replace all placeholders before use.
+# Do not commit real links.
+
+vless://CLIENT_UUID@vpn.example.com:28080?type=xhttp&encryption=none&path=%2F&host=&mode=auto&security=reality&pbk=PUBLIC_KEY&fp=qq&sni=www.microsoft.com&sid=SHORT_ID&spx=%2F#KEENETIC-XHTTP-EXAMPLE
+
