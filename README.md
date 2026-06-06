@@ -149,6 +149,36 @@ curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/m
 - тест через SOCKS `127.0.0.1:10808`;
 - CPU/RAM.
 
+## Backup
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/backup.sh | sh
+```
+
+Backup сохраняется в:
+
+```sh
+/opt/root/xray-backups/
+```
+
+## Repair
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/repair.sh | sh
+```
+
+Repair проверяет:
+
+- смонтирован ли `/opt`;
+- есть ли `/opt/bin/xray`;
+- валиден ли `/opt/etc/xray/config.json`;
+- есть ли init-скрипт `/opt/etc/init.d/S24xray`;
+- запущен ли процесс Xray;
+- работает ли локальный SOCKS `127.0.0.1:10808`;
+- CPU/RAM.
+
+Если Xray отсутствует, `repair.sh` попробует скачать подходящую версию под архитектуру роутера.
+
 ## Удаление
 
 ```sh
