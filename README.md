@@ -2,24 +2,72 @@
 
 Набор скриптов для быстрой настройки Xray на роутерах Keenetic с Entware.
 
-## Рекомендуемые модели Keenetic
+## Точные модели Keenetic и Netcraze
 
-Для новых установок ориентируйся не только на название модели, а на точный код ревизии `KN-xxxx`. Перед покупкой проси у клиента или продавца фото наклейки снизу роутера либо карточки товара, где указан этот код.
+Для новых установок ориентируйся не только на название модели, а на точный код ревизии:
 
-Рекомендуемые ревизии для покупки:
+- `KN-xxxx` для Keenetic.
+- `NC-xxxx` для Netcraze.
+
+Перед покупкой проси у клиента или продавца фото наклейки снизу роутера либо карточки товара, где указан этот код.
+
+Точно подходят для покупки:
 
 ```text
-Keenetic Hopper KN-3811  - основной вариант
-Keenetic Hero   KN-1012  - вариант с запасом
-Keenetic Giga   KN-1012  - вариант с запасом
+Keenetic Hopper    KN-3811  - основной вариант
+Keenetic Hopper SE KN-3812  - основной вариант с запасом
+Keenetic Giga/Hero KN-1012  - вариант с запасом, название зависит от рынка
+Keenetic Peak      KN-2710  - мощный вариант
+Keenetic Ultra SE  KN-2510  - мощный вариант
+Keenetic Ultra     KN-1811  - мощный вариант
 ```
 
-Можно использовать, но лучше уточнять перед покупкой:
+Точно подходят из Netcraze:
 
 ```text
-Keenetic Hopper KN-3810  - подходит, но KN-3811 предпочтительнее
-Keenetic Ultra           - только после проверки точного KN-кода
-Keenetic Peak            - только после проверки точного KN-кода
+Netcraze Hopper  NC-3811  - основной вариант
+Netcraze Giga    NC-1012  - вариант с запасом
+Netcraze Ultra   NC-1812  - мощный вариант
+Netcraze Hero 5G NC-4110  - мощный вариант с 5G/LTE WAN
+```
+
+Можно использовать, если уже есть у клиента:
+
+```text
+Keenetic Hopper KN-3810  - рабочий вариант, но KN-3811/3812 предпочтительнее
+Keenetic Giga   KN-1010  - старый рабочий вариант, лучше с USB-флешкой
+Keenetic Giga   KN-1011  - старый рабочий вариант, лучше с USB-флешкой
+Keenetic Ultra  KN-1810  - старый рабочий вариант, лучше с USB-флешкой
+Keenetic Giant  KN-2610  - рабочий вариант
+Keenetic Viva   KN-1913  - только для умеренной нагрузки
+Netcraze Viva   NC-1913  - только для умеренной нагрузки
+```
+
+Покупать только после отдельной проверки задачи:
+
+```text
+Keenetic Hero 4G   KN-2310 / KN-2311
+Keenetic Hopper DSL KN-3610
+Netcraze Hopper DSL NC-3611
+```
+
+Не брать как основной вариант для Xray/YouTube:
+
+```text
+Keenetic Start
+Keenetic Lite
+Keenetic City
+Keenetic Air
+Keenetic 4G KN-1210 / KN-1211 / KN-1213
+Keenetic Extra KN-1714
+Netcraze 4G NC-1213
+Netcraze Carrier NC-1721
+Speedster / Speedster DSL / Speedster 4G+
+старые MIPS-модели
+модели с 128/256 MB RAM
+модели без USB
+модели без OPKG/Entware
+модели без точного KN/NC-кода в объявлении
 ```
 
 Минимальные требования:
@@ -32,53 +80,18 @@ USB-порт: да
 SSH: да
 ```
 
-Если в объявлении указано только `Hopper`, `Hero`, `Giga`, `Ultra` или `Peak`, но нет `KN-xxxx`, решение о покупке не принимаем до уточнения ревизии.
+Если в объявлении указано только `Hopper`, `Hero`, `Giga`, `Ultra`, `Peak` или `Netcraze`, но нет точного `KN-xxxx` / `NC-xxxx`, решение о покупке не принимаем до уточнения ревизии.
 
-## Модели Netcraze
+Старые или слабые модели могут запускать OPKG, но для YouTube/Telegram/Instagram через Xray часто не хватает производительности.
 
-У Netcraze проверяем точный код `NC-xxxx`. Для наших задач подходят только модели с нормальным запасом по CPU/RAM, USB и поддержкой OPKG/Entware.
+Проверочные источники:
 
-Рекомендуемые Netcraze:
-
-```text
-Netcraze Hopper  NC-3811  - основной вариант
-Netcraze Giga    NC-1012  - вариант с запасом
-Netcraze Ultra   NC-1812  - вариант с запасом
-Netcraze Hero 5G NC-4110  - вариант с 5G/LTE, если нужен мобильный WAN
-```
-
-Можно рассматривать только после проверки требований:
-
-```text
-Netcraze Hopper DSL NC-3611  - если клиенту действительно нужен DSL
-Netcraze Viva       NC-1913  - проверять CPU/RAM и сценарий нагрузки
-```
-
-Не брать как основной вариант для Xray/YouTube:
-
-```text
-Netcraze 4G NC-1213
-Netcraze Carrier NC-1721
-Speedster / Speedster DSL / Speedster 4G+
-модели без USB
-модели без OPKG/Entware
-модели без точного NC-кода в объявлении
-```
-
-Для Netcraze действует то же правило: если продавец пишет только `Netcraze Hopper`, `Netcraze Giga` или `Netcraze Ultra`, сначала уточняем `NC-xxxx`.
-
-Не рекомендуется брать для новых установок:
-
-```text
-Keenetic Start
-Keenetic Lite
-Keenetic City
-Keenetic Air
-старые MIPS-модели
-модели с 128/256 MB RAM
-```
-
-Старые или слабые модели могут работать, но для YouTube/Telegram/Instagram через Xray часто не хватает производительности.
+- Keenetic OPKG: `https://help.keenetic.com/hc/ru/articles/360000948719-OPKG`
+- Keenetic OPKG во встроенную память: `https://help.keenetic.com/hc/ru/articles/360021888880`
+- Netcraze Hopper NC-3811: `https://netcraze.ru/ru/netcraze-hopper`
+- Netcraze Giga NC-1012 OPKG: `https://support.netcraze.ru/giga/nc-1012/ru/18481-opkg.html`
+- Netcraze Ultra NC-1812: `https://netcraze.ru/ru/netcraze-ultra`
+- Netcraze Hero 5G NC-4110: `https://support.netcraze.ru/hero-5g/nc-4110/ru/25475-getting-started.html`
 
 ## Требования
 
