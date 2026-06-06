@@ -80,7 +80,16 @@ if command -v python3 >/dev/null 2>&1; then
 elif command -v python >/dev/null 2>&1; then
   PY_BIN="python"
 fi
-if [ -n "$PY_BIN" ]; then
+if command -v jq >/dev/null 2>&1 && [ -s "$XRAY_CONFIG" ]; then
+  echo "config: $XRAY_CONFIG"
+  jq -r '
+    (.inbounds[]? | "inbound: \(.tag) \(.protocol) \(.listen):\(.port)"),
+    (.outbounds[]? | select(.tag == "proxy") |
+      .settings.vnext[0] as $v |
+      .streamSettings as $s |
+      "proxy: \($v.address) \($v.port) \($s.network) \($s.security)")
+  ' "$XRAY_CONFIG" 2>/dev/null || true
+elif [ -n "$PY_BIN" ]; then
   "$PY_BIN" - <<'PY' 2>/dev/null || true
 import json
 p="/opt/etc/xray/config.json"
@@ -95,7 +104,7 @@ for o in data.get("outbounds", []):
         print("proxy:", v.get("address"), v.get("port"), st.get("network"), st.get("security"))
 PY
 else
-  echo "python not found"
+  echo "jq/python not found"
 fi
 
 echo

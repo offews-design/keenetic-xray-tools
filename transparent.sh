@@ -5,6 +5,7 @@ ACTION="${1:-status}"
 TPORT="${TPORT:-12345}"
 LAN_IF="${LAN_IF:-br0}"
 CHAIN="${CHAIN:-KEENETIC_XRAY}"
+QUIC_CHAIN="${QUIC_CHAIN:-KEENETIC_XRAY_QUIC}"
 
 need_iptables() {
   if ! command -v iptables >/dev/null 2>&1; then
@@ -52,6 +53,30 @@ disable_rules() {
   echo "Transparent redirect disabled"
 }
 
+delete_quic_jump() {
+  while iptables -D FORWARD -i "$LAN_IF" -p udp --dport 443 -j "$QUIC_CHAIN" 2>/dev/null; do
+    :
+  done
+}
+
+block_quic() {
+  need_iptables
+  iptables -N "$QUIC_CHAIN" 2>/dev/null || true
+  iptables -F "$QUIC_CHAIN"
+  iptables -A "$QUIC_CHAIN" -j REJECT
+  delete_quic_jump
+  iptables -I FORWARD -i "$LAN_IF" -p udp --dport 443 -j "$QUIC_CHAIN"
+  echo "QUIC/UDP 443 blocked for $LAN_IF. Browsers/apps should fall back to TCP."
+}
+
+unblock_quic() {
+  need_iptables
+  delete_quic_jump
+  iptables -F "$QUIC_CHAIN" 2>/dev/null || true
+  iptables -X "$QUIC_CHAIN" 2>/dev/null || true
+  echo "QUIC/UDP 443 block disabled"
+}
+
 status_rules() {
   need_iptables
   echo "=== PREROUTING ==="
@@ -59,14 +84,20 @@ status_rules() {
   echo
   echo "=== $CHAIN ==="
   iptables -t nat -S "$CHAIN" 2>/dev/null || echo "chain not found"
+  echo
+  echo "=== QUIC ==="
+  iptables -S FORWARD 2>/dev/null | grep "$QUIC_CHAIN" || echo "no QUIC block"
+  iptables -S "$QUIC_CHAIN" 2>/dev/null || true
 }
 
 case "$ACTION" in
   enable|on|start) enable_rules ;;
   disable|off|stop) disable_rules ;;
+  block-quic) block_quic ;;
+  unblock-quic) unblock_quic ;;
   status|check) status_rules ;;
   *)
-    echo "Usage: sh transparent.sh {enable|disable|status}"
+    echo "Usage: sh transparent.sh {enable|disable|block-quic|unblock-quic|status}"
     echo "Optional env: LAN_IF=br0 TPORT=12345"
     exit 1
     ;;
