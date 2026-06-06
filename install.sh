@@ -197,7 +197,7 @@ jq -n \
       },
       {
         tag: \"transparent-in\",
-        listen: \"127.0.0.1\",
+        listen: \"0.0.0.0\",
         port: \$tproxy_port,
         protocol: \"dokodemo-door\",
         settings: {network: \"tcp,udp\", followRedirect: true},
