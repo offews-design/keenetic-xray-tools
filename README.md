@@ -49,7 +49,7 @@ curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/m
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/autostart-transparent.sh | sh
 ```
 
-Быстрый откат, если у клиента пропал интернет:
+Быстрый откат, если пропал интернет:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
@@ -71,20 +71,7 @@ prepare-usb.sh              подготовка USB-накопителя под
 examples/                   безопасные шаблоны VLESS без реальных ключей
 ```
 
-## Безопасность
-
-Не публикуй в репозитории:
-
-- реальные `vless://` ссылки;
-- UUID клиентов;
-- Reality private key;
-- Reality public key, short ID и seed, если они относятся к боевому серверу;
-- IP-адреса серверов;
-- ссылки подписок 3x-ui;
-- домены панелей и приватные URL.
-
-В README и `examples/` используй только шаблоны вида `CLIENT_LINK`, `example.com`, `PUBLIC_KEY`, `SHORT_ID`.
-
+## Рекомендации по скорости
 ```text
 Для bridge-схемы желательно подключение от 50 Мбит/с.
 Если меньше 30 Мбит/с, YouTube через bridge может работать только в 720p.
@@ -100,7 +87,7 @@ examples/                   безопасные шаблоны VLESS без р�
 - `NC-xxxx` для Netcraze.
 
 
-Точно подходят для покупки:
+Точно подходят:
 
 ```text
 Keenetic Hopper    KN-3811  - основной вариант
@@ -120,7 +107,7 @@ Netcraze Ultra   NC-1812  - мощный вариант
 Netcraze Hero 5G NC-4110  - мощный вариант с 5G/LTE WAN
 ```
 
-Можно использовать, если уже есть у клиента:
+Можно использовать, если уже есть:
 
 ```text
 Keenetic Hopper KN-3810  - рабочий вариант, но KN-3811/3812 предпочтительнее
