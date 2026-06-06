@@ -340,6 +340,7 @@ https://youtube.com
 https://web.telegram.org
 https://instagram.com
 ```
+https://ifconfig.me Должен показать ip адрес вышего bridge
 
 Если браузер показывает `ERR_CONNECTION_REFUSED`, значит `transparent-in` в Xray слушает не `0.0.0.0:12345`. Выполните:
 
