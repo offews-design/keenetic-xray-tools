@@ -65,18 +65,27 @@ USB 3.0 флешка 16-32 GB
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/prepare-usb.sh -o /tmp/prepare-usb.sh
-sh /tmp/prepare-usb.sh /dev/sda ENTWARE
+sh /tmp/prepare-usb.sh --list
+sh /tmp/prepare-usb.sh --auto ENTWARE
 ```
 
 Внимание: скрипт полностью стирает выбранный USB-накопитель.
 
-Перед запуском проверь список устройств:
+Если `--auto` отказывается работать, значит найдено несколько USB/removable устройств. Тогда выбери флешку вручную:
+
+```sh
+sh /tmp/prepare-usb.sh /dev/sda ENTWARE
+```
+
+Скрипт проверяет, что устройство похоже на USB/removable, и отказывается форматировать устройство, с которого смонтированы `/` или `/opt`.
+
+Все равно перед запуском проверь список устройств:
 
 ```sh
 lsblk
 ```
 
-Не запускай скрипт, если не уверен, что `/dev/sda` - это именно флешка.
+Не запускай ручной режим, если не уверен, что `/dev/sda` - это именно флешка.
 
 ## Установка
 
