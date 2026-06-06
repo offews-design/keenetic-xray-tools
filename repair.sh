@@ -21,6 +21,24 @@ curl_socks_test() {
   fi
 }
 
+find_xray_bin() {
+  if [ -x "$XRAY_BIN" ]; then
+    echo "$XRAY_BIN"
+    return 0
+  fi
+  if command -v xray >/dev/null 2>&1; then
+    command -v xray
+    return 0
+  fi
+  for p in /opt/sbin/xray /opt/usr/bin/xray /opt/usr/sbin/xray /usr/bin/xray /usr/sbin/xray; do
+    if [ -x "$p" ]; then
+      echo "$p"
+      return 0
+    fi
+  done
+  return 1
+}
+
 fail=0
 
 say "Checking /opt"
@@ -43,7 +61,7 @@ install_xray() {
     aarch64|arm64) XRAY_ARCH="arm64-v8a" ;;
     armv7l|armv7*) XRAY_ARCH="arm32-v7a" ;;
     mipsel*) XRAY_ARCH="mips32le" ;;
-    mips*) XRAY_ARCH="mips32" ;;
+    mips*) XRAY_ARCH="mips32le" ;;
     *) echo "ERROR: unsupported arch: $ARCH"; return 1 ;;
   esac
 
@@ -54,11 +72,20 @@ install_xray() {
   say "Downloading Xray: $URL"
   curl -L --fail -o "$ZIP" "$URL"
   unzip -o "$ZIP" -d "$TMP" >/dev/null
-  install -m 755 "$TMP/xray" "$XRAY_BIN"
+  if [ -x "$TMP/xray_softfloat" ]; then
+    cp "$TMP/xray_softfloat" "$XRAY_BIN"
+  else
+    cp "$TMP/xray" "$XRAY_BIN"
+  fi
+  chmod 755 "$XRAY_BIN"
 }
 
 say "Checking Xray binary"
-if [ ! -x "$XRAY_BIN" ]; then
+FOUND_XRAY_BIN="$(find_xray_bin 2>/dev/null || true)"
+if [ -n "$FOUND_XRAY_BIN" ]; then
+  XRAY_BIN="$FOUND_XRAY_BIN"
+  say "Using Xray: $XRAY_BIN"
+else
   say "Xray missing, installing"
   install_xray || fail=1
 fi

@@ -215,19 +215,34 @@ Size: весь накопитель
 
 В 3x-ui создай отдельного клиента для Keenetic и скопируй его `vless://...` ссылку.
 
-На роутере выполни:
+Сначала отключи старые transparent-правила, если они уже включались:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/install.sh | sh -s -- 'vless://CLIENT_LINK'
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- unblock-quic
+```
+
+Затем сохрани ссылку в переменную. Вставляй ссылку одной строкой, без переносов внутри `pbk`, `sid` и других параметров:
+
+```sh
+VLESS='vless://CLIENT_LINK'
+```
+
+Установи или обнови Xray-конфиг:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/install.sh | sh -s -- "$VLESS"
 ```
 
 Скрипт:
 
 - проверит наличие Entware;
+- использует существующий Xray, если он найден в `/opt/sbin/xray` или `/opt/bin/xray`;
 - установит Xray, если его нет;
+- сделает backup старых файлов в `/opt/root/xray-backups/`;
 - создаст `/opt/etc/xray/config.json`;
 - добавит правила Xray для Telegram / YouTube / Instagram;
-- оставит остальной трафик напрямую;
+- отправит остальной трафик через `direct` внутри Xray;
 - создаст init-скрипт `/opt/etc/init.d/S24xray`;
 - запустит Xray.
 
@@ -247,6 +262,121 @@ curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/m
 - локальные порты;
 - тест через SOCKS `127.0.0.1:10808`;
 - CPU/RAM.
+
+Успешный минимум:
+
+```text
+Configuration OK
+xray run -config /opt/etc/xray/config.json
+127.0.0.1:10808 LISTEN
+0.0.0.0:12345 LISTEN
+Connectivity: внешний IP
+```
+
+Если `12345` слушает `127.0.0.1`, исправь старый конфиг:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/fix-transparent-listen.sh | sh
+```
+
+## Тест скорости
+
+Сначала проверь скорость без Xray:
+
+```sh
+curl -L -o /dev/null https://speed.cloudflare.com/__down?bytes=10000000
+```
+
+Потом проверь скорость через локальный SOCKS Xray:
+
+```sh
+curl -L --socks5-hostname 127.0.0.1:10808 -o /dev/null https://speed.cloudflare.com/__down?bytes=50000000
+```
+
+Сравни значения `Average Speed`:
+
+```text
+1 MB/s  примерно 8 Мбит/с
+2 MB/s  примерно 16 Мбит/с
+3 MB/s  примерно 24 Мбит/с
+```
+
+Если CPU низкий, но скорость через SOCKS заметно ниже прямой скорости, ограничение в профиле/маршруте `bridge -> outbound`, а не в роутере.
+
+## Прозрачный режим
+
+Прозрачный режим включай только после успешного `check.sh` и теста SOCKS.
+
+Включить TCP redirect для LAN:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- enable
+```
+
+Проверить правила:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- status
+```
+
+Ожидаемый минимум:
+
+```text
+-A PREROUTING -i br0 -p tcp -j KEENETIC_XRAY
+-A KEENETIC_XRAY -p tcp -j REDIRECT --to-ports 12345
+```
+
+После включения проверь с клиентского устройства:
+
+```text
+https://ifconfig.me
+https://youtube.com
+https://web.telegram.org
+https://instagram.com
+```
+
+Если браузер показывает `ERR_CONNECTION_REFUSED`, значит `transparent-in` в Xray слушает не `0.0.0.0:12345`. Выполни:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/fix-transparent-listen.sh | sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- enable
+```
+
+## QUIC для YouTube
+
+После включения transparent заблокируй UDP/443, чтобы YouTube/Chrome не пытались использовать QUIC мимо TCP-перехвата:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- block-quic
+```
+
+Отключить QUIC-блок:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- unblock-quic
+```
+
+## Автозапуск маршрутов
+
+Xray запускается через `/opt/etc/init.d/S24xray`, но firewall-правила могут пропасть после перезагрузки роутера. После того как профиль проверен и работает, установи автозапуск transparent + QUIC-block:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/autostart-transparent.sh | sh
+```
+
+Будет создан:
+
+```sh
+/opt/etc/init.d/S25xray-transparent
+```
+
+Проверить после перезагрузки:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/check.sh | sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- status
+```
 
 ## Backup
 
@@ -269,7 +399,7 @@ curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/m
 Repair проверяет:
 
 - смонтирован ли `/opt`;
-- есть ли `/opt/bin/xray`;
+- есть ли Xray в `/opt/sbin/xray`, `/opt/bin/xray` или другом стандартном пути;
 - валиден ли `/opt/etc/xray/config.json`;
 - есть ли init-скрипт `/opt/etc/init.d/S24xray`;
 - запущен ли процесс Xray;
@@ -277,6 +407,27 @@ Repair проверяет:
 - CPU/RAM.
 
 Если Xray отсутствует, `repair.sh` попробует скачать подходящую версию под архитектуру роутера.
+
+## Быстрый откат
+
+Если после включения transparent у клиента пропал интернет:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- unblock-quic
+```
+
+Остановить Xray:
+
+```sh
+/opt/etc/init.d/S24xray stop
+```
+
+Вернуть backup вручную можно из:
+
+```sh
+/opt/root/xray-backups/
+```
 
 ## Удаление
 
@@ -290,45 +441,29 @@ curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/m
 
 ```sh
 /opt/bin/xray
+/opt/sbin/xray
 /opt/etc/xray/config.json
 /opt/etc/init.d/S24xray
+/opt/etc/init.d/S25xray-transparent
 ```
-
-## Прозрачный режим
-
-По умолчанию скрипт не включает прозрачный перехват LAN-трафика.
-
-Это сделано специально: firewall у Keenetic может отличаться между версиями KeeneticOS, и слепое включение `iptables redirect` может сломать интернет на роутере.
-
-Сначала проверь, что Xray работает через локальный SOCKS:
-
-```sh
-127.0.0.1:10808
-```
-
-После проверки можно отдельно адаптировать прозрачный режим под конкретную модель/прошивку.
-
-Заготовка:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh
-```
-
-Сейчас `transparent.sh` создает безопасный scaffold и не перенаправляет весь трафик автоматически.
 
 ## Какой профиль создавать в 3x-ui
 
-Для Keenetic лучше начинать с совместимого профиля:
+Для Keenetic делай отдельного клиента в 3x-ui и тестируй минимум два профиля.
+
+Профиль 1: TCP/REALITY, обычно легче для слабых роутеров:
 
 ```text
 Protocol: VLESS
 Transport: TCP RAW
 Security: REALITY
 Flow: xtls-rprx-vision
-Fingerprint: chrome
+Fingerprint: qq или chrome
+SNI: www.microsoft.com
+Target: www.microsoft.com:443
 ```
 
-Если конкретный Keenetic поддерживает XHTTP, можно тестировать отдельный профиль:
+Профиль 2: XHTTP/REALITY, может быть устойчивее на некоторых сетях, но не всегда быстрее:
 
 ```text
 Protocol: VLESS
@@ -336,4 +471,21 @@ Transport: XHTTP
 Security: REALITY
 Flow: пусто
 Fingerprint: qq
+SNI: www.microsoft.com
+Path: /
+Mode: auto
 ```
+
+Для каждого профиля делай одинаковый тест:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/transparent.sh | sh -s -- disable
+VLESS='vless://CLIENT_LINK'
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/install.sh | sh -s -- "$VLESS"
+curl -fsSL https://raw.githubusercontent.com/offews-design/keenetic-xray-tools/main/check.sh | sh
+curl -L --socks5-hostname 127.0.0.1:10808 -o /dev/null https://speed.cloudflare.com/__down?bytes=50000000
+```
+
+Оставляй профиль, который дает лучшую скорость и стабильнее открывает YouTube.
+
+Для старых MIPS-моделей вроде Keenetic Viva не жди высокой скорости на 1080p. Если через SOCKS получается около `1.8 MB/s`, это примерно `14-15 Мбит/с`: 720p обычно нормально, 1080p может буферить.
